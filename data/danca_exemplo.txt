@@ -1,0 +1,12 @@
+CATEGORIA=DANCA
+ID;NOME;PONTUACAO;PRECISAO;COMBO_MAXIMO
+1;Ana Silva;985000;99,5;342
+2;Bruno Santos;872000;97,2;215
+3;Carla Oliveira;920000;98,1;280
+4;Daniel Souza;985000;98,8;310
+5;Elisa Pereira;765000;95,4;198
+6;Felipe Costa;810000;96,7;230
+7;Gabriela Carvalho;990000;99,8;365
+8;Henrique Almeida;654000;92,3;175
+9;Isabela Ferreira;880000;97,5;250
+10;João Rodrigues;935000;98,5;295

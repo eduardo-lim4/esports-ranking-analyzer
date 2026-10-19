@@ -1,0 +1,12 @@
+CATEGORIA=LUTA
+ID;NOME;VITORIAS;DERROTAS
+1;Ryu Silva;45;5
+2;Ken Oliveira;42;8
+3;Chun Souza;45;5
+4;Guile Costa;38;12
+5;Zangief Pereira;50;10
+6;Dhalsim Santos;35;15
+7;Blanka Almeida;40;10
+8;Honda Ferreira;44;6
+9;Vega Rodrigues;39;11
+10;Balrog Lima;41;9

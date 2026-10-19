@@ -1,0 +1,12 @@
+CATEGORIA=CORRIDA
+ID;NOME;TEMPO_PROVA_MS;VOLTAS;POSICAO_CHEGADA
+1;Carlos Oliveira;125430;10;1
+2;Ana Souza;128900;10;2
+3;Pedro Costa;132100;10;3
+4;Mariana Silva;125430;10;4
+5;Lucas Pereira;140500;10;5
+6;Fernanda Santos;135200;10;6
+7;Ricardo Almeida;129800;10;7
+8;Juliana Ferreira;131500;10;8
+9;Bruno Rodrigues;145000;10;9
+10;Camila Lima;138700;10;10
