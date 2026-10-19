@@ -29,6 +29,4 @@ bin/
 hs_err_pid*
 replay_pid*
 
-# Generated results (screenshots, evidence) - keep only .gitkeep
-results/*
-!results/.gitkeep
+# results/ keeps GUI screenshots as academic evidence (tracked)
