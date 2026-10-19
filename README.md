@@ -271,7 +271,7 @@ competitivos para listas pequenas ou quase ordenadas.
 ```text
 ESPORTS-RANKING-ANALYZER/
 ├── data/                       # Arquivos de exemplo
-├── results/                    # Capturas do GuiTest (ignoradas pelo Git)
+├── results/                    # Capturas do GuiTest (versionadas como evidências)
 ├── src/
 │   ├── algorithms/             # Algoritmos de ordenação
 │   ├── benchmark/              # Benchmark e resultados
