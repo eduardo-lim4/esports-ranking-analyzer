@@ -16,6 +16,8 @@ public class TestRunner {
             DataGeneratorTest.main(args);
             DataReaderTest.main(args);
             BenchmarkTest.main(args);
+            BenchmarkScaleTest.main(args);
+            SmokeTest.main(args);
 
             System.out.println("\n====================================");
             System.out.println("  TODOS OS TESTES PASSARAM");

@@ -36,7 +36,7 @@ menos importante):
 1. Maior pontuação.
 2. Maior precisão (%).
 3. Maior combo máximo.
-4. Nome crescente (desempate determinístico).
+4. Nome crescente; em nomes iguais, ID crescente.
 
 Atributos principais: `pontuacao`, `precisao`, `comboMaximo`.
 
@@ -47,7 +47,7 @@ Representa jogos de corrida. Critérios de ordenação:
 1. Menor tempo de prova (em milissegundos).
 2. Menor posição de chegada.
 3. Maior número de voltas.
-4. Nome crescente.
+4. Nome crescente; em nomes iguais, ID crescente.
 
 Atributos principais: `tempoProvaMs`, `posicaoChegada`, `voltas`.
 
@@ -58,7 +58,7 @@ Representa jogos de luta. Critérios de ordenação:
 1. Maior aproveitamento (`vitórias / (vitórias + derrotas) * 100`).
 2. Maior número absoluto de vitórias.
 3. Menor número de derrotas.
-4. Nome crescente.
+4. Nome crescente; em nomes iguais, ID crescente.
 
 Atributos principais: `vitorias`, `derrotas`.
 
@@ -82,7 +82,10 @@ aleatórios, mas reprodutíveis quando uma semente é fornecida.
 
 ### 2. Arquivo `.txt`
 
-A classe `DataReader` lê arquivos de texto com o formato a seguir:
+A classe `DataReader` lê arquivos de texto codificados em UTF-8 com o formato
+a seguir. Um BOM UTF-8 inicial é aceito. O cabeçalho deve conter exatamente
+as colunas da categoria, na ordem documentada; campos ausentes, extras e IDs
+duplicados são rejeitados.
 
 ```text
 CATEGORIA=<DANCA|CORRIDA|LUTA>
@@ -137,8 +140,13 @@ ordenação, utilizando `System.nanoTime()`, e convertido para milissegundos.
 Após cada execução, o benchmark valida:
 
 - Se os elementos estão ordenados pelo critério selecionado.
-- Se nenhum registro foi perdido.
-- Se nenhum registro foi duplicado ou alterado indevidamente.
+- Se nenhum registro foi perdido, duplicado ou alterado (comparação por valor
+  integral dos campos do jogador).
+- Falhas de execução de um algoritmo são reportadas como inválidas sem
+  interromper a coleta dos outros resultados.
+
+Cada tempo descreve apenas aquela execução e aquele conjunto; não constitui
+uma afirmação de que um algoritmo seja universalmente mais rápido.
 
 ## Interface gráfica
 
@@ -150,8 +158,9 @@ A interface utiliza Java Swing com tema escuro. Permite:
 - Executar a análise em segundo plano (sem congelar a interface).
 - Visualizar o ranking ordenado dos jogadores.
 
-A execução da análise utiliza `SwingWorker`, garantindo que operações
-longas não bloqueiem a thread de eventos do Swing.
+A execução da análise utiliza `SwingWorker`: geração, leitura do arquivo e
+ordenação ocorrem em segundo plano, enquanto a atualização dos componentes é
+feita na thread de eventos do Swing.
 
 ## Como compilar e executar
 
@@ -160,13 +169,15 @@ Pré-requisito: JDK 17 ou superior.
 ### Compilar
 
 ```bash
-javac -d out -sourcepath src src/model/*.java src/algorithms/*.java src/data/*.java src/benchmark/*.java src/ui/Main.java
+mkdir -p out
+javac -encoding UTF-8 -d out -sourcepath src src/model/*.java src/algorithms/*.java src/data/*.java src/benchmark/*.java src/ui/Main.java
 ```
 
 No Windows (cmd):
 
 ```cmd
-javac -d out -sourcepath src src\model\Categoria.java src\model\Jogador.java src\algorithms\SortingAlgorithm.java src\algorithms\BubbleSort.java src\algorithms\InsertionSort.java src\algorithms\MergeSort.java src\data\DataGenerator.java src\data\DataReader.java src\benchmark\BenchmarkResult.java src\benchmark\Benchmark.java src\ui\Main.java
+if not exist out mkdir out
+javac -encoding UTF-8 -d out -sourcepath src src\model\Categoria.java src\model\Jogador.java src\algorithms\SortingAlgorithm.java src\algorithms\BubbleSort.java src\algorithms\InsertionSort.java src\algorithms\MergeSort.java src\data\DataGenerator.java src\data\DataReader.java src\benchmark\BenchmarkResult.java src\benchmark\Benchmark.java src\ui\Main.java
 ```
 
 ### Executar a aplicação
@@ -180,31 +191,57 @@ java -cp out ui.Main
 Os testes estão no diretório `tests/` e não dependem de frameworks externos.
 
 ```bash
+mkdir -p out
 javac -d out -cp out tests/*.java
-java -cp out TestRunner
+java -ea -cp out TestRunner
 ```
 
-No Windows (cmd):
+No Windows (cmd), compilação e execução dos testes automatizados (inclui
+`BenchmarkScaleTest` com 1.000 e 10.000 registros e o `SmokeTest` dos três
+arquivos):
 
 ```cmd
-javac -d out -cp out tests\TestRunner.java tests\SortingTest.java tests\DataGeneratorTest.java tests\DataReaderTest.java tests\BenchmarkTest.java tests\SmokeTest.java
-java -cp out TestRunner
+if not exist out mkdir out
+javac -d out -cp out tests\TestRunner.java tests\SortingTest.java tests\DataGeneratorTest.java tests\DataReaderTest.java tests\BenchmarkTest.java tests\BenchmarkScaleTest.java tests\SmokeTest.java tests\GuiTest.java
+java -ea -cp out TestRunner
 ```
+
+Os testes usam `assert`; por isso, é obrigatório executar a JVM com a opção
+`-ea` para que as verificações sejam ativadas.
+
+### Teste da interface gráfica
+
+Em um ambiente Windows com desktop disponível, execute separadamente:
+
+```cmd
+java -ea -cp out GuiTest
+```
+
+O teste abre e fecha a janela, aciona os controles, executa benchmarks,
+valida a tabela/vencedor, importa `data\\corrida_exemplo.txt`, verifica o
+ranking e o cancelamento do seletor. Ele salva capturas em `results/`.
+Não execute esse teste em ambiente headless.
 
 ## Testes
 
 Os testes cobrem:
 
 - Algoritmos: lista vazia, um elemento, ordem aleatória, ordem inversa,
-  dados já ordenados, empates e equivalência entre os três algoritmos.
-- Dados: geração com diferentes quantidades, compatibilidade de categoria,
-  reprodutibilidade e validação de quantidades inválidas.
-- Leitura: arquivos válidos, vazios, malformados e com categoria
-  incompatível.
-- Benchmark: comparação justa, validação da ordenação, preservação do
-  conjunto original e tempos não negativos.
-- Integração: leitura dos arquivos de exemplo e execução completa do
+  dados já ordenados, empates/critério secundário, extremos válidos e
+  equivalência entre os três algoritmos.
+- Dados: geração de 1.000 a 100.000 registros, atributos de cada categoria,
+  reprodutibilidade e validação de entradas inválidas.
+- Leitura: arquivos válidos, vazios, malformados, com cabeçalho incompleto,
+  IDs duplicados, acentos UTF-8/BOM e categoria incompatível.
+- Benchmark: comparação justa, lista vazia, validação, preservação do conjunto
+  original e tratamento de falha do algoritmo.
+- Escala: execução medida com 1.000 e 10.000 registros
+  (`BenchmarkScaleTest`; tempos variam conforme a máquina).
+- Integração: leitura dos três arquivos de exemplo e execução completa do
   benchmark (`SmokeTest`).
+- Interface: o `GuiTest` automatiza a janela, execução, exibição dos rankings,
+  importação pelo seletor, cancelamento, erro de categoria e responsividade
+  com 10.000 registros; execute-o separadamente em ambiente gráfico.
 
 ## Complexidade teórica vs. tempo medido
 
@@ -234,7 +271,7 @@ competitivos para listas pequenas ou quase ordenadas.
 ```text
 ESPORTS-RANKING-ANALYZER/
 ├── data/                       # Arquivos de exemplo
-├── results/                    # Diretório para resultados exportados
+├── results/                    # Capturas do GuiTest (ignoradas pelo Git)
 ├── src/
 │   ├── algorithms/             # Algoritmos de ordenação
 │   ├── benchmark/              # Benchmark e resultados

@@ -1,6 +1,5 @@
 package ui;
 
-import algorithms.SortingAlgorithm;
 import benchmark.Benchmark;
 import benchmark.BenchmarkResult;
 import data.DataGenerator;
@@ -812,8 +811,6 @@ public class Main extends JFrame {
         String fonte = (String) fonteCombo.getSelectedItem();
         String quantidadeTexto = (String) tamanhoCombo.getSelectedItem();
 
-        categoriaSelecionada.setText(categoriaTexto);
-
         Categoria categoria;
         try {
             categoria = Categoria.fromString(categoriaTexto);
@@ -822,27 +819,40 @@ public class Main extends JFrame {
             return;
         }
 
-        List<Jogador> jogadores;
-        try {
-            jogadores = obterDados(fonte, categoria, quantidadeTexto);
-        } catch (Exception e) {
-            mostrarErro("Erro ao obter dados: " + e.getMessage());
-            return;
-        }
+        // Nova análise iniciada: descarta resultados antigos para não exibir
+        // valores de uma execução anterior como se fossem atuais.
+        ultimosResultados = new ArrayList<>();
+        limparTabela();
+        categoriaSelecionada.setText(categoriaTexto);
 
-        if (jogadores == null || jogadores.isEmpty()) {
-            mostrarErro("Nenhum dado disponível para análise.");
-            return;
+        if ("Arquivo .txt".equals(fonte)) {
+            arquivoSelecionado = leitor.selecionarArquivo();
+            if (arquivoSelecionado == null) {
+                JOptionPane.showMessageDialog(
+                        this,
+                        "Seleção de arquivo cancelada. A análise não foi iniciada.",
+                        "Aviso",
+                        JOptionPane.INFORMATION_MESSAGE
+                );
+                return;
+            }
         }
 
         Comparator<Jogador> comparador = Jogador.comparadorPorCategoria(categoria);
-
-        limparTabela();
+        File arquivo = arquivoSelecionado;
         setBotoesHabilitados(false);
 
         new SwingWorker<List<BenchmarkResult>, Void>() {
             @Override
             protected List<BenchmarkResult> doInBackground() {
+                List<Jogador> jogadores = obterDados(
+                        fonte, categoria, quantidadeTexto, arquivo
+                );
+                if (jogadores == null || jogadores.isEmpty()) {
+                    throw new IllegalArgumentException(
+                            "Nenhum dado disponível para análise."
+                    );
+                }
                 return benchmark.executar(jogadores, comparador);
             }
 
@@ -852,7 +862,10 @@ public class Main extends JFrame {
                     ultimosResultados = get();
                     atualizarTabela(ultimosResultados);
                 } catch (Exception e) {
-                    mostrarErro("Erro durante o benchmark: " + e.getCause().getMessage());
+                    Throwable causa = e.getCause() != null ? e.getCause() : e;
+                    String mensagem = causa.getMessage();
+                    mostrarErro("Erro ao carregar dados ou executar o benchmark: "
+                            + (mensagem == null ? causa.getClass().getSimpleName() : mensagem));
                     limparTabela();
                 } finally {
                     setBotoesHabilitados(true);
@@ -863,19 +876,14 @@ public class Main extends JFrame {
 
     private List<Jogador> obterDados(String fonte,
                                      Categoria categoria,
-                                     String quantidadeTexto) {
+                                     String quantidadeTexto,
+                                     File arquivo) {
         if ("Arquivo .txt".equals(fonte)) {
-            arquivoSelecionado = leitor.selecionarArquivo();
-            if (arquivoSelecionado == null) {
-                throw new IllegalArgumentException(
-                        "Nenhum arquivo foi selecionado."
-                );
-            }
             try {
-                return leitor.ler(arquivoSelecionado, categoria);
+                return leitor.ler(arquivo, categoria);
             } catch (IOException e) {
                 throw new IllegalArgumentException(
-                        "Falha ao ler o arquivo: " + e.getMessage()
+                        "Falha ao ler o arquivo: " + e.getMessage(), e
                 );
             }
         }
@@ -914,7 +922,7 @@ public class Main extends JFrame {
 
         for (int i = 0; i < resultados.size(); i++) {
             BenchmarkResult resultado = resultados.get(i);
-            String tempo = String.format("%.3f", resultado.getTempoMs());
+            String tempo = String.format("%.6f", resultado.getTempoMs());
             String status = resultado.getStatus();
             if (resultado == vencedor) {
                 status = "Vencedor • " + status;
@@ -976,9 +984,14 @@ public class Main extends JFrame {
         JTable tabela = new JTable(model);
         tabela.setRowHeight(30);
         tabela.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        tabela.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+        tabela.getColumnModel().getColumn(0).setPreferredWidth(70);
+        tabela.getColumnModel().getColumn(1).setPreferredWidth(70);
+        tabela.getColumnModel().getColumn(2).setPreferredWidth(170);
+        tabela.getColumnModel().getColumn(3).setPreferredWidth(530);
 
         JScrollPane scroll = new JScrollPane(tabela);
-        scroll.setPreferredSize(new Dimension(600, 400));
+        scroll.setPreferredSize(new Dimension(860, 400));
 
         JOptionPane.showMessageDialog(
                 this,
@@ -1013,7 +1026,8 @@ public class Main extends JFrame {
     }
 
     private void habilitarRecursivo(Component componente, boolean habilitado) {
-        if (componente instanceof JButton) {
+        if (componente instanceof JButton
+                || componente instanceof JComboBox<?>) {
             componente.setEnabled(habilitado);
         }
         if (componente instanceof Container) {

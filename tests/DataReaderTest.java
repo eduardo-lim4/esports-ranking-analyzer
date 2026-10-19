@@ -3,8 +3,10 @@ import model.Categoria;
 import model.Jogador;
 
 import java.io.File;
-import java.io.FileWriter;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
@@ -19,16 +21,25 @@ public class DataReaderTest {
         File arquivoVazio = criarArquivoVazio();
         File arquivoIncompativel = criarArquivoIncompativel();
         File arquivoMalformado = criarArquivoMalformado();
+        File arquivoIdsDuplicados = criarArquivoIdsDuplicados();
+        File arquivoAcentos = criarArquivoComAcentos();
+        File arquivoCabecalhoIncompleto = criarArquivoCabecalhoIncompleto();
 
         testeArquivoValido(arquivoValido);
         testeArquivoVazio(arquivoVazio);
         testeCategoriaIncompativel(arquivoIncompativel);
         testeArquivoMalformado(arquivoMalformado);
+        testeIdsDuplicados(arquivoIdsDuplicados);
+        testeAcentosUtf8(arquivoAcentos);
+        testeCabecalhoIncompleto(arquivoCabecalhoIncompleto);
 
         arquivoValido.delete();
         arquivoVazio.delete();
         arquivoIncompativel.delete();
         arquivoMalformado.delete();
+        arquivoIdsDuplicados.delete();
+        arquivoAcentos.delete();
+        arquivoCabecalhoIncompleto.delete();
 
         System.out.println("DataReaderTest: OK");
     }
@@ -72,16 +83,54 @@ public class DataReaderTest {
         }
     }
 
-    private static File criarArquivoValido() throws IOException {
-        File arquivo = File.createTempFile("danca_valido", ".txt");
-        try (FileWriter writer = new FileWriter(arquivo)) {
-            writer.write("CATEGORIA=DANCA\n");
-            writer.write("ID;NOME;PONTUACAO;PRECISAO;COMBO_MAXIMO\n");
-            writer.write("1;Ana Silva;95000;98,5;120\n");
-            writer.write("2;Bruno Costa;88000;95,2;98\n");
-            writer.write("3;Carla Souza;92000;97,1;110\n");
+    private static void testeIdsDuplicados(File arquivo) {
+        DataReader leitor = new DataReader();
+        try {
+            leitor.ler(arquivo, Categoria.DANCA);
+            assert false : "IDs duplicados deveriam lançar exceção";
+        } catch (IOException | IllegalArgumentException e) {
+            assert e.getMessage().contains("duplicado")
+                    : "Mensagem de erro deveria mencionar duplicidade";
+        }
+    }
+
+    private static void testeCabecalhoIncompleto(File arquivo) {
+        DataReader leitor = new DataReader();
+        try {
+            leitor.ler(arquivo, Categoria.DANCA);
+            assert false : "Cabeçalho com campo ausente deve ser rejeitado";
+        } catch (IOException | IllegalArgumentException e) {
+            assert e.getMessage().contains("Cabeçalho inválido")
+                    : "Erro deve identificar cabeçalho inválido";
+        }
+    }
+
+    private static void testeAcentosUtf8(File arquivo) throws IOException {
+        DataReader leitor = new DataReader();
+        List<Jogador> jogadores = leitor.ler(arquivo, Categoria.DANCA);
+        assert jogadores.get(0).getNome().equals("João Vitória")
+                : "Nome com acentos deveria ser lido corretamente em UTF-8. "
+                + "Encontrado: " + jogadores.get(0).getNome();
+    }
+
+    /** Cria um arquivo temporário escrito em UTF-8. */
+    private static File criarArquivo(String prefixo, String conteudo)
+            throws IOException {
+        File arquivo = File.createTempFile(prefixo, ".txt");
+        try (OutputStreamWriter writer = new OutputStreamWriter(
+                new FileOutputStream(arquivo), StandardCharsets.UTF_8)) {
+            writer.write(conteudo);
         }
         return arquivo;
+    }
+
+    private static File criarArquivoValido() throws IOException {
+        return criarArquivo("danca_valido",
+                "CATEGORIA=DANCA\n"
+                + "ID;NOME;PONTUACAO;PRECISAO;COMBO_MAXIMO\n"
+                + "1;Ana Silva;95000;98,5;120\n"
+                + "2;Bruno Costa;88000;95,2;98\n"
+                + "3;Carla Souza;92000;97,1;110\n");
     }
 
     private static File criarArquivoVazio() throws IOException {
@@ -91,22 +140,38 @@ public class DataReaderTest {
     }
 
     private static File criarArquivoIncompativel() throws IOException {
-        File arquivo = File.createTempFile("incompativel", ".txt");
-        try (FileWriter writer = new FileWriter(arquivo)) {
-            writer.write("CATEGORIA=DANCA\n");
-            writer.write("ID;NOME;PONTUACAO;PRECISAO;COMBO_MAXIMO\n");
-            writer.write("1;Ana;95000;98,5;120\n");
-        }
-        return arquivo;
+        return criarArquivo("incompativel",
+                "CATEGORIA=DANCA\n"
+                + "ID;NOME;PONTUACAO;PRECISAO;COMBO_MAXIMO\n"
+                + "1;Ana;95000;98,5;120\n");
     }
 
     private static File criarArquivoMalformado() throws IOException {
-        File arquivo = File.createTempFile("malformado", ".txt");
-        try (FileWriter writer = new FileWriter(arquivo)) {
-            writer.write("CATEGORIA=DANCA\n");
-            writer.write("ID;NOME;PONTUACAO;PRECISAO;COMBO_MAXIMO\n");
-            writer.write("abc;Ana;95000;98,5;120\n");
-        }
-        return arquivo;
+        return criarArquivo("malformado",
+                "CATEGORIA=DANCA\n"
+                + "ID;NOME;PONTUACAO;PRECISAO;COMBO_MAXIMO\n"
+                + "abc;Ana;95000;98,5;120\n");
+    }
+
+    private static File criarArquivoIdsDuplicados() throws IOException {
+        return criarArquivo("ids_duplicados",
+                "CATEGORIA=DANCA\n"
+                + "ID;NOME;PONTUACAO;PRECISAO;COMBO_MAXIMO\n"
+                + "1;Ana;95000;98,5;120\n"
+                + "1;Bruno;88000;95,2;98\n");
+    }
+
+    private static File criarArquivoCabecalhoIncompleto() throws IOException {
+        return criarArquivo("cabecalho_incompleto",
+                "CATEGORIA=DANCA\n"
+                + "ID;NOME;PONTUACAO;PRECISAO\n"
+                + "1;Ana;95000;98,5\n");
+    }
+
+    private static File criarArquivoComAcentos() throws IOException {
+        return criarArquivo("acentos",
+                "\uFEFFCATEGORIA=DANCA\n"
+                + "ID;NOME;PONTUACAO;PRECISAO;COMBO_MAXIMO\n"
+                + "1;João Vitória;95000;98,5;120\n");
     }
 }

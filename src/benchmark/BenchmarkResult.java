@@ -2,7 +2,6 @@ package benchmark;
 
 import model.Jogador;
 
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -28,7 +27,7 @@ public class BenchmarkResult {
         this.tempoMs = tempoMs;
         this.status = status;
         this.valido = valido;
-        this.ranking = Collections.unmodifiableList(ranking);
+        this.ranking = List.copyOf(ranking);
     }
 
     public String getAlgoritmo() {

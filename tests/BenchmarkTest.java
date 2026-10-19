@@ -17,6 +17,8 @@ public class BenchmarkTest {
         testeComparacaoJusta();
         testeValidacaoOrdenacao();
         testePreservacaoOriginal();
+        testeListaVazia();
+        testeFalhaDeExecucao();
 
         System.out.println("BenchmarkTest: OK");
     }
@@ -54,6 +56,40 @@ public class BenchmarkTest {
                 assert ranking.get(i - 1).getTempoProvaMs() <= ranking.get(i).getTempoProvaMs()
                         : "Ranking não está ordenado";
             }
+        }
+    }
+
+    private static void testeListaVazia() {
+        Benchmark benchmark = new Benchmark();
+        List<BenchmarkResult> resultados = benchmark.executar(
+                List.of(),
+                Jogador.comparadorPorCategoria(Categoria.DANCA)
+        );
+        assert resultados.size() == 3 : "Lista vazia deve executar os três algoritmos";
+        for (BenchmarkResult resultado : resultados) {
+            assert resultado.isValido()
+                    : "Resultado vazio deve ser válido: " + resultado.getStatus();
+            assert resultado.getRanking().isEmpty()
+                    : "Ranking da lista vazia deve permanecer vazio";
+        }
+    }
+
+    private static void testeFalhaDeExecucao() {
+        DataGenerator gerador = new DataGenerator();
+        List<Jogador> jogadores = gerador.gerar(Categoria.DANCA, 10);
+        List<BenchmarkResult> resultados = new Benchmark().executar(
+                jogadores,
+                (a, b) -> {
+                    throw new IllegalStateException("Falha simulada");
+                }
+        );
+        assert resultados.size() == 3
+                : "Falha de um algoritmo deve preservar as três linhas de resultado";
+        for (BenchmarkResult resultado : resultados) {
+            assert !resultado.isValido()
+                    : "Execução com comparador defeituoso não pode ser válida";
+            assert resultado.getStatus().contains("Falha simulada")
+                    : "A falha deve ser explicada no status";
         }
     }
 

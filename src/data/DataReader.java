@@ -7,8 +7,10 @@ import javax.swing.JFileChooser;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -23,6 +25,7 @@ import java.util.Set;
  *
  * <b>Formato esperado:</b>
  * <ul>
+ *   <li>Arquivo codificado em UTF-8</li>
  *   <li>Primeira linha: {@code CATEGORIA=<DANCA|CORRIDA|LUTA>}</li>
  *   <li>Segunda linha: cabeçalho com os nomes dos campos separados por
  *       ponto-e-vírgula</li>
@@ -70,13 +73,20 @@ public class DataReader {
             throw new IllegalArgumentException("A categoria esperada é obrigatória.");
         }
 
-        try (BufferedReader reader = new BufferedReader(new FileReader(arquivo))) {
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(
+                        new FileInputStream(arquivo),
+                        StandardCharsets.UTF_8
+                )
+        )) {
             String linhaCategoria = reader.readLine();
             if (linhaCategoria == null || linhaCategoria.isBlank()) {
                 throw new IllegalArgumentException(
                         "O arquivo está vazio ou não possui a linha de categoria."
                 );
             }
+            // Remove marca de ordem de bytes (BOM), caso presente.
+            linhaCategoria = linhaCategoria.replace("\uFEFF", "");
 
             Categoria categoriaArquivo = extrairCategoria(linhaCategoria);
             if (categoriaArquivo != categoriaEsperada) {
@@ -94,7 +104,10 @@ public class DataReader {
                 );
             }
 
-            List<String> colunas = Arrays.asList(cabecalho.split(";"));
+            List<String> colunas = Arrays.stream(cabecalho.split(";", -1))
+                    .map(String::trim)
+                    .toList();
+            validarCabecalho(colunas, categoriaArquivo);
             List<Jogador> jogadores = new ArrayList<>();
             String linha;
             int numeroLinha = 3;
@@ -117,6 +130,24 @@ public class DataReader {
             validarIdsUnicos(jogadores);
 
             return jogadores;
+        }
+    }
+
+    private void validarCabecalho(List<String> colunas, Categoria categoria) {
+        List<String> esperadas = switch (categoria) {
+            case DANCA -> List.of(
+                    "ID", "NOME", "PONTUACAO", "PRECISAO", "COMBO_MAXIMO"
+            );
+            case CORRIDA -> List.of(
+                    "ID", "NOME", "TEMPO_PROVA_MS", "VOLTAS", "POSICAO_CHEGADA"
+            );
+            case LUTA -> List.of("ID", "NOME", "VITORIAS", "DERROTAS");
+        };
+        if (!esperadas.equals(colunas)) {
+            throw new IllegalArgumentException(
+                    "Cabeçalho inválido para " + categoria.getNomeExibicao()
+                            + ". Esperado: " + String.join(";", esperadas)
+            );
         }
     }
 

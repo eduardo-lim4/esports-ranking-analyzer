@@ -4,6 +4,7 @@
 # Build output directories
 out/
 build/
+verify-build/
 bin/
 
 # Log file
@@ -27,3 +28,7 @@ bin/
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*
+
+# Generated results (screenshots, evidence) - keep only .gitkeep
+results/*
+!results/.gitkeep

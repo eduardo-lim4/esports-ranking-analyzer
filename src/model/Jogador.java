@@ -14,11 +14,11 @@ import java.util.Objects;
  *
  * <ul>
  *   <li><b>Dança</b>: pontuação decrescente, precisão decrescente,
- *       combo máximo decrescente, nome crescente.</li>
+ *       combo máximo decrescente, nome crescente e ID crescente.</li>
  *   <li><b>Corrida</b>: tempo de prova crescente, posição de chegada
- *       crescente, voltas decrescente, nome crescente.</li>
+ *       crescente, voltas decrescente, nome crescente e ID crescente.</li>
  *   <li><b>Luta</b>: aproveitamento decrescente, vitórias decrescente,
- *       derrotas crescente, nome crescente.</li>
+ *       derrotas crescentes, nome crescente e ID crescente.</li>
  * </ul>
  */
 public class Jogador {
@@ -83,15 +83,34 @@ public class Jogador {
                     "A categoria do jogador é obrigatória."
             );
         }
-        if (precisao < 0.0 || precisao > 100.0) {
+        if (!Double.isFinite(precisao) || precisao < 0.0 || precisao > 100.0) {
             throw new IllegalArgumentException(
-                    "A precisão deve estar entre 0.0 e 100.0."
+                    "A precisão deve ser um valor finito entre 0.0 e 100.0."
             );
         }
         if (vitorias < 0 || derrotas < 0) {
             throw new IllegalArgumentException(
                     "Vitórias e derrotas não podem ser negativas."
             );
+        }
+        switch (categoria) {
+            case DANCA -> {
+                if (pontuacao < 0 || comboMaximo < 0) {
+                    throw new IllegalArgumentException(
+                            "Pontuação e combo máximo de Dança não podem ser negativos."
+                    );
+                }
+            }
+            case CORRIDA -> {
+                if (tempoProvaMs <= 0 || voltas <= 0 || posicaoChegada <= 0) {
+                    throw new IllegalArgumentException(
+                            "Tempo, voltas e posição de Corrida devem ser maiores que zero."
+                    );
+                }
+            }
+            case LUTA -> {
+                // Vitórias e derrotas já foram validadas acima.
+            }
         }
 
         this.id = id;
@@ -159,7 +178,7 @@ public class Jogador {
      * @return aproveitamento percentual
      */
     public double getAproveitamento() {
-        int total = vitorias + derrotas;
+        long total = (long) vitorias + derrotas;
         if (total == 0) {
             return 0.0;
         }
@@ -172,12 +191,23 @@ public class Jogador {
         if (!(o instanceof Jogador)) return false;
         Jogador jogador = (Jogador) o;
         return id == jogador.id
+                && Double.compare(jogador.precisao, precisao) == 0
+                && pontuacao == jogador.pontuacao
+                && comboMaximo == jogador.comboMaximo
+                && tempoProvaMs == jogador.tempoProvaMs
+                && voltas == jogador.voltas
+                && posicaoChegada == jogador.posicaoChegada
+                && vitorias == jogador.vitorias
+                && derrotas == jogador.derrotas
+                && Objects.equals(nome, jogador.nome)
                 && categoria == jogador.categoria;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, categoria);
+        return Objects.hash(id, nome, categoria, pontuacao, precisao,
+                comboMaximo, tempoProvaMs, voltas, posicaoChegada,
+                vitorias, derrotas);
     }
 
     @Override
@@ -188,9 +218,22 @@ public class Jogador {
         );
     }
 
+    private static int compararAproveitamentoDescendente(Jogador a, Jogador b) {
+        long totalA = (long) a.vitorias + a.derrotas;
+        long totalB = (long) b.vitorias + b.derrotas;
+        // Aproveitamento de 0/0 é definido como zero no modelo.
+        if (totalA == 0) totalA = 1;
+        if (totalB == 0) totalB = 1;
+
+        long aproveitamentoB = (long) b.vitorias * totalA;
+        long aproveitamentoA = (long) a.vitorias * totalB;
+        return Long.compare(aproveitamentoB, aproveitamentoA);
+    }
+
     /**
      * Retorna um comparador que ordena jogadores de acordo com a categoria
-     * informada. Empates são resolvidos de forma determinística pelo nome.
+     * informada. Empates são resolvidos deterministicamente pelo nome e,
+     * por fim, pelo identificador do jogador.
      *
      * @param categoria categoria cujo critério de ordenação será usado
      * @return comparador correspondente
@@ -201,17 +244,30 @@ public class Jogador {
                     .comparingInt(Jogador::getPontuacao).reversed()
                     .thenComparing(Comparator.comparingDouble(Jogador::getPrecisao).reversed())
                     .thenComparing(Comparator.comparingInt(Jogador::getComboMaximo).reversed())
-                    .thenComparing(Jogador::getNome);
+                    .thenComparing(Jogador::getNome)
+                    .thenComparingInt(Jogador::getId);
             case CORRIDA -> Comparator
                     .comparingInt(Jogador::getTempoProvaMs)
                     .thenComparingInt(Jogador::getPosicaoChegada)
                     .thenComparing(Comparator.comparingInt(Jogador::getVoltas).reversed())
-                    .thenComparing(Jogador::getNome);
-            case LUTA -> Comparator
-                    .comparingDouble(Jogador::getAproveitamento).reversed()
-                    .thenComparing(Comparator.comparingInt(Jogador::getVitorias).reversed())
-                    .thenComparingInt(Jogador::getDerrotas)
-                    .thenComparing(Jogador::getNome);
+                    .thenComparing(Jogador::getNome)
+                    .thenComparingInt(Jogador::getId);
+            case LUTA -> (a, b) -> {
+                int resultado = compararAproveitamentoDescendente(a, b);
+                if (resultado == 0) {
+                    resultado = Integer.compare(b.vitorias, a.vitorias);
+                }
+                if (resultado == 0) {
+                    resultado = Integer.compare(a.derrotas, b.derrotas);
+                }
+                if (resultado == 0) {
+                    resultado = a.nome.compareTo(b.nome);
+                }
+                if (resultado == 0) {
+                    resultado = Integer.compare(a.id, b.id);
+                }
+                return resultado;
+            };
         };
     }
 }

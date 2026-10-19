@@ -8,7 +8,9 @@ import model.Jogador;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Executa o benchmark comparando os três algoritmos de ordenação.
@@ -57,7 +59,19 @@ public class Benchmark {
         List<Jogador> copia = new ArrayList<>(original);
 
         long inicio = System.nanoTime();
-        algoritmo.sort(copia, comparador);
+        try {
+            algoritmo.sort(copia, comparador);
+        } catch (RuntimeException e) {
+            long fim = System.nanoTime();
+            double tempoMs = (fim - inicio) / 1_000_000.0;
+            return new BenchmarkResult(
+                    algoritmo.getName(),
+                    tempoMs,
+                    "Erro na execução: " + mensagemDaExcecao(e),
+                    false,
+                    copia
+            );
+        }
         long fim = System.nanoTime();
 
         double tempoMs = (fim - inicio) / 1_000_000.0;
@@ -83,6 +97,13 @@ public class Benchmark {
         );
     }
 
+    private String mensagemDaExcecao(RuntimeException e) {
+        String mensagem = e.getMessage();
+        return mensagem == null || mensagem.isBlank()
+                ? e.getClass().getSimpleName()
+                : mensagem;
+    }
+
     private boolean estaOrdenado(List<Jogador> lista, Comparator<Jogador> comparador) {
         for (int i = 1; i < lista.size(); i++) {
             if (comparador.compare(lista.get(i - 1), lista.get(i)) > 0) {
@@ -92,14 +113,34 @@ public class Benchmark {
         return true;
     }
 
+    /**
+     * Verifica se a lista ordenada contém exatamente os mesmos elementos da
+     * lista original (mesma multiplicidade), sem perdas, duplicações ou
+     * alterações. A comparação é feita por contagem de frequência, fora do
+     * intervalo cronometrado e sem utilizar ordenação pronta.
+     */
     private boolean mesmosElementos(List<Jogador> original, List<Jogador> ordenado) {
         if (original.size() != ordenado.size()) {
             return false;
         }
-        List<Jogador> copiaOriginal = new ArrayList<>(original);
-        List<Jogador> copiaOrdenado = new ArrayList<>(ordenado);
-        copiaOriginal.sort(Jogador.comparadorPorCategoria(original.get(0).getCategoria()));
-        copiaOrdenado.sort(Jogador.comparadorPorCategoria(original.get(0).getCategoria()));
-        return copiaOriginal.equals(copiaOrdenado);
+        if (original.isEmpty()) {
+            return true;
+        }
+        Map<Jogador, Integer> contagem = new HashMap<>();
+        for (Jogador j : original) {
+            contagem.merge(j, 1, Integer::sum);
+        }
+        for (Jogador j : ordenado) {
+            Integer restante = contagem.get(j);
+            if (restante == null) {
+                return false;
+            }
+            if (restante == 1) {
+                contagem.remove(j);
+            } else {
+                contagem.put(j, restante - 1);
+            }
+        }
+        return contagem.isEmpty();
     }
 }

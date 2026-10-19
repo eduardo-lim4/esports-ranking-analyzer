@@ -29,6 +29,9 @@ public class SortingTest {
         testeOrdemInversa();
         testeEmpates();
         testeCategorias();
+        testeDesempatesSecundarios();
+        testeValoresExtremos();
+        testeValidacaoDoModelo();
         testeResultadosEquivalentes();
 
         System.out.println("SortingTest: OK");
@@ -113,6 +116,86 @@ public class SortingTest {
         copia = new ArrayList<>(lutas);
         executarTodos(copia, Categoria.LUTA);
         assert copia.get(0).getId() == 2 : "Maior aproveitamento deve vencer";
+    }
+
+    private static void testeDesempatesSecundarios() {
+        List<Jogador> danca = new ArrayList<>(List.of(
+                criarDanca(1, "Zoe", 9000, 98.0, 100),
+                criarDanca(2, "Bruno", 9000, 98.0, 150),
+                criarDanca(3, "Ana", 9000, 99.0, 1),
+                criarDanca(4, "Zoe", 9000, 98.0, 100)
+        ));
+        executarTodos(danca, Categoria.DANCA);
+        assert danca.get(0).getId() == 3 : "Precisão deve desempatar Dança";
+        assert danca.get(1).getId() == 2 : "Combo deve desempatar Dança";
+        assert danca.get(2).getId() == 1 && danca.get(3).getId() == 4
+                : "ID crescente deve resolver nomes e métricas idênticas";
+
+        List<Jogador> corrida = new ArrayList<>(List.of(
+                criarCorrida(1, "Zoe", 1000, 10, 1),
+                criarCorrida(2, "Bruno", 1000, 20, 1),
+                criarCorrida(3, "Ana", 1000, 20, 1),
+                criarCorrida(4, "Carlos", 1000, 1, 2)
+        ));
+        executarTodos(corrida, Categoria.CORRIDA);
+        assert corrida.get(0).getId() == 3 : "Mais voltas deve desempatar Corrida";
+        assert corrida.get(1).getId() == 2 : "Nome deve desempatar Corrida";
+        assert corrida.get(3).getId() == 4 : "Posição deve desempatar antes das voltas";
+
+        List<Jogador> luta = new ArrayList<>(List.of(
+                criarLuta(1, "Ana", 9, 1),
+                criarLuta(2, "Bruno", 18, 2),
+                criarLuta(3, "Carlos", 18, 3),
+                criarLuta(4, "Diana", 8, 2)
+        ));
+        executarTodos(luta, Categoria.LUTA);
+        assert luta.get(0).getId() == 2 : "Vitórias desempata aproveitamento igual";
+        assert luta.get(1).getId() == 1 : "Menos derrotas desempata vitórias iguais";
+        assert luta.get(3).getId() == 4 : "Menor aproveitamento deve ficar depois";
+    }
+
+    private static void testeValoresExtremos() {
+        List<Jogador> danca = new ArrayList<>(List.of(
+                criarDanca(1, "Mínimo", 0, 0.0, 0),
+                criarDanca(2, "Máximo", Integer.MAX_VALUE, 100.0, Integer.MAX_VALUE)
+        ));
+        executarTodos(danca, Categoria.DANCA);
+        assert danca.get(0).getId() == 2 : "Extremos de Dança devem ser ordenados";
+
+        List<Jogador> corrida = new ArrayList<>(List.of(
+                criarCorrida(1, "Lento", Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE),
+                criarCorrida(2, "Rápido", 1, 1, 1)
+        ));
+        executarTodos(corrida, Categoria.CORRIDA);
+        assert corrida.get(0).getId() == 2 : "Extremos de Corrida devem ser ordenados";
+
+        List<Jogador> luta = new ArrayList<>(List.of(
+                criarLuta(1, "Baixo", 0, Integer.MAX_VALUE),
+                criarLuta(2, "Alto", Integer.MAX_VALUE, 0)
+        ));
+        executarTodos(luta, Categoria.LUTA);
+        assert luta.get(0).getId() == 2 : "Extremos de Luta devem ser ordenados";
+    }
+
+    private static void testeValidacaoDoModelo() {
+        try {
+            criarDanca(1, "Precisão inválida", 10, Double.NaN, 0);
+            assert false : "Precisão NaN deve ser rejeitada";
+        } catch (IllegalArgumentException esperado) {
+            // esperado
+        }
+        try {
+            criarCorrida(1, "Tempo inválido", 0, 1, 1);
+            assert false : "Tempo de prova zero deve ser rejeitado";
+        } catch (IllegalArgumentException esperado) {
+            // esperado
+        }
+        try {
+            criarDanca(1, "Pontuação inválida", -1, 50.0, 0);
+            assert false : "Pontuação negativa deve ser rejeitada";
+        } catch (IllegalArgumentException esperado) {
+            // esperado
+        }
     }
 
     private static void testeResultadosEquivalentes() {
