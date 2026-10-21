@@ -186,6 +186,30 @@ javac -encoding UTF-8 -d out -sourcepath src src\model\Categoria.java src\model\
 java -cp out ui.Main
 ```
 
+### Gerar executável (opcional)
+
+Duas formas de empacotar a aplicação, ambas com o JDK 21 (o `jpackage`
+existe a partir do JDK 14):
+
+**1. JAR executável** (requer Java 17+ instalado na máquina de destino):
+
+```cmd
+if not exist dist mkdir dist
+jar --create --file dist\esports-ranking-analyzer.jar --main-class ui.Main -C out .
+java -jar dist\esports-ranking-analyzer.jar
+```
+
+**2. Executável Windows autocontido** (não requer Java instalado; o runtime
+é embutido e a pasta gerada tem aproximadamente 150 MB):
+
+```cmd
+jpackage --type app-image --name EsportsRankingAnalyzer --input dist --main-jar esports-ranking-analyzer.jar --main-class ui.Main --dest release --win-console
+```
+
+O resultado fica em `release\EsportsRankingAnalyzer\EsportsRankingAnalyzer.exe`.
+Os diretórios `dist/` e `release/` são ignorados pelo Git por serem artefatos
+de build.
+
 ### Compilar e executar os testes
 
 Os testes estão no diretório `tests/` e não dependem de frameworks externos.

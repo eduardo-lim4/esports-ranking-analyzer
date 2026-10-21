@@ -6,6 +6,8 @@ out/
 build/
 verify-build/
 bin/
+dist/
+release/
 
 # Log file
 *.log
