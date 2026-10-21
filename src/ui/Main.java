@@ -549,6 +549,39 @@ public class Main extends JFrame {
         tabela.getTableHeader()
                 .setReorderingAllowed(false);
 
+        // O Windows LAF ignora as cores do cabeçalho; um renderer
+        // opaco garante o fundo escuro e o texto legível.
+        DefaultTableCellRenderer cabecalhoRenderer =
+                new DefaultTableCellRenderer();
+
+        cabecalhoRenderer.setHorizontalAlignment(
+                SwingConstants.CENTER
+        );
+
+        cabecalhoRenderer.setBackground(PANEL_LIGHT);
+
+        cabecalhoRenderer.setForeground(TEXT);
+
+        cabecalhoRenderer.setOpaque(true);
+
+        cabecalhoRenderer.setFont(
+                new Font(
+                        "Segoe UI",
+                        Font.BOLD,
+                        12
+                )
+        );
+
+        cabecalhoRenderer.setBorder(
+                BorderFactory.createMatteBorder(
+                        0, 0, 1, 1,
+                        new Color(50, 54, 65)
+                )
+        );
+
+        tabela.getTableHeader()
+                .setDefaultRenderer(cabecalhoRenderer);
+
         DefaultTableCellRenderer centralizar =
                 new DefaultTableCellRenderer();
 
@@ -718,10 +751,10 @@ public class Main extends JFrame {
         );
 
         combo.setBackground(
-                PANEL_LIGHT
+                Color.WHITE
         );
 
-        combo.setForeground(TEXT);
+        combo.setForeground(Color.BLACK);
 
         combo.setFont(
                 new Font(
@@ -733,6 +766,50 @@ public class Main extends JFrame {
 
         combo.setAlignmentX(
                 Component.LEFT_ALIGNMENT
+        );
+
+        // O Windows LAF ignora as cores do combo; o renderer
+        // garante texto preto sobre fundo branco e destaque
+        // azul para o item selecionado na lista suspensa.
+        combo.setRenderer(
+                new DefaultListCellRenderer() {
+
+                    @Override
+                    public Component getListCellRendererComponent(
+                            JList<?> list,
+                            Object value,
+                            int index,
+                            boolean isSelected,
+                            boolean cellHasFocus
+                    ) {
+
+                        JLabel item =
+                                (JLabel) super
+                                        .getListCellRendererComponent(
+                                                list,
+                                                value,
+                                                index,
+                                                isSelected,
+                                                cellHasFocus
+                                        );
+
+                        item.setOpaque(true);
+
+                        if (isSelected) {
+                            item.setBackground(ACCENT);
+                            item.setForeground(Color.WHITE);
+                        } else {
+                            item.setBackground(Color.WHITE);
+                            item.setForeground(Color.BLACK);
+                        }
+
+                        item.setBorder(
+                                new EmptyBorder(4, 8, 4, 8)
+                        );
+
+                        return item;
+                    }
+                }
         );
     }
 
@@ -984,14 +1061,39 @@ public class Main extends JFrame {
         JTable tabela = new JTable(model);
         tabela.setRowHeight(30);
         tabela.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        tabela.setBackground(PANEL);
+        tabela.setForeground(TEXT);
+        tabela.setGridColor(new Color(50, 54, 65));
+        tabela.setSelectionBackground(ACCENT);
+        tabela.setSelectionForeground(Color.WHITE);
         tabela.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
         tabela.getColumnModel().getColumn(0).setPreferredWidth(70);
         tabela.getColumnModel().getColumn(1).setPreferredWidth(70);
         tabela.getColumnModel().getColumn(2).setPreferredWidth(170);
         tabela.getColumnModel().getColumn(3).setPreferredWidth(530);
 
+        DefaultTableCellRenderer cabecalhoRanking =
+                new DefaultTableCellRenderer();
+        cabecalhoRanking.setBackground(PANEL_LIGHT);
+        cabecalhoRanking.setForeground(TEXT);
+        cabecalhoRanking.setOpaque(true);
+        cabecalhoRanking.setFont(
+                new Font("Segoe UI", Font.BOLD, 12)
+        );
+        cabecalhoRanking.setBorder(
+                BorderFactory.createMatteBorder(
+                        0, 0, 1, 1,
+                        new Color(50, 54, 65)
+                )
+        );
+        tabela.getTableHeader()
+                .setDefaultRenderer(cabecalhoRanking);
+        tabela.getTableHeader()
+                .setReorderingAllowed(false);
+
         JScrollPane scroll = new JScrollPane(tabela);
         scroll.setPreferredSize(new Dimension(860, 400));
+        scroll.getViewport().setBackground(PANEL);
 
         JOptionPane.showMessageDialog(
                 this,
